@@ -1,0 +1,97 @@
+apply plugin: 'com.android.library'
+apply plugin: 'groovyx.android'
+apply plugin: 'jacoco-android'
+
+def cfg = rootProject.ext.configuration // 配置
+def libs = rootProject.ext.libraries // 库
+
+def gitSha = 'git rev-parse --short HEAD'.execute([], project.rootDir).text.trim() as String
+def buildTime = new Date().format("yyyyMMddHHmmss", TimeZone.getTimeZone("GMT+8"))
+
+android {
+    compileSdkVersion cfg.compileVersion as Integer
+    defaultConfig {
+        minSdkVersion 17
+        targetSdkVersion cfg.targetSdkVersion as Integer
+        versionName cfg.currentVersion as String
+        buildConfigField "String", "GIT_SHA", "\"${gitSha}\""
+        buildConfigField "String", "BUILD_TIME", "\"${buildTime}\""
+        buildConfigField "String", "AGENT_VERSION", "\"${cfg.currentVersion}\""
+    }
+
+    sourceSets.main {
+        libs.srcDirs = ['libs']
+        assets.srcDirs = ['assets']
+    }
+
+    compileOptions {
+        sourceCompatibility cfg.sourceCompatibility
+        targetCompatibility cfg.targetCompatibility
+    }
+    buildTypes {
+        release {
+            try {
+                def dontMinify = DONT_MINIFY_RELEASE
+                minifyEnabled false
+                System.out.println("Don't minify for debug " + dontMinify)
+            } catch (e) {
+                minifyEnabled false
+                System.out.println("minify for release mode")
+            }
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    lintOptions {
+        abortOnError false
+    }
+    testOptions {
+        unitTests {
+            all {
+                returnDefaultValues = true
+                includeAndroidResources = true
+                testLogging.showStandardStreams = rootProject.ext.showStandardStreams
+                failFast = rootProject.ext.failFast
+                maxParallelForks = rootProject.ext.maxParallelForks
+            }
+        }
+    }
+}
+
+
+ext {
+    // cpplugin配置，表示为library
+    runAsBase = true
+}
+
+// 手动向sentry上报release版本信息，不上报将会在第一个应用启动自动生成对应release
+// https://sentry.growingio.com/settings/account/api/auth-tokens/ 这个token是对登录账号的
+task releaseToSentry(type: Exec, group: 'publishing') {
+    println "Start release to Sentry..."
+    commandLine "curl", "https://sentry.growingio.com/api/0/organizations/growingio/releases/",
+            "-X", "POST",
+            "-H", "Authorization: Bearer 44a925325143491ea9d4d29e0805b7489eb7dfced4ba44b1b2cc13eef0e6d1ac",
+            "-H", "Content-Type: application/json",
+            "-d", "{\"version\":\"$cfg.currentVersion\",\"projects\":[\"gioandroid\"]}"
+    standardOutput = new ByteArrayOutputStream()
+    doLast {
+        println "execResult = " + execResult
+        println "standardOutput = " + standardOutput.toString()
+        if (standardOutput.toString().length() == 0) {
+            throw new GradleException("Release to Sentry ERROR")
+        }
+    }
+}
+
+apply from: rootProject.file('free-transfor.gradle')
+dependencies {
+    compileOnly "com.android.support:${libs.recyclerview}"
+    compileOnly "com.android.support:${libs.appcompat}"
+    compileOnly "com.google.android.gms:play-services-ads:18.0.0"
+    testImplementation "junit:junit:${libs.junit}"
+    testImplementation "org.json:json:${libs.json}"
+
+    compileOnly files('../msa-helper/libs/oaid_sdk_1.1.0.jar')
+    compileOnly files('../msa-helper/libs/oaid_sdk_1.0.25.jar')
+    compileOnly files('../msa-helper/libs/msa_mdid_1.0.13.jar')
+    compileOnly files('../msa-helper/libs/miit_mdid_1.0.10.jar')
+}

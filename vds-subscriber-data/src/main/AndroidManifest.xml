@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.growingio.android.sdk.data">
+
+    <uses-sdk tools:overrideLibrary="com.growingio.eventcenter"/>
+</manifest>

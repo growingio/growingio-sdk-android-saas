@@ -1,0 +1,87 @@
+apply plugin: 'com.android.library'
+apply plugin: 'com.growingio.cp_plugin'
+
+
+def cfg = rootProject.ext.configuration // 配置
+def libs = rootProject.ext.libraries // 库
+
+android {
+    compileSdkVersion cfg.compileVersion as Integer
+    defaultConfig {
+        minSdkVersion 7
+        targetSdkVersion cfg.targetSdkVersion as Integer
+        versionName cfg.currentVersion as String
+    }
+
+    sourceSets.main {
+        libs.srcDirs = ['libs']
+        assets.srcDirs = ['assets']
+    }
+
+    compileOptions {
+        sourceCompatibility cfg.sourceCompatibility
+        targetCompatibility cfg.targetCompatibility
+    }
+    buildTypes {
+        release {
+            try {
+                def dontMinify = DONT_MINIFY_RELEASE
+                minifyEnabled false
+                System.out.println("Don't minify for debug " + dontMinify)
+            } catch (e) {
+                minifyEnabled false
+                System.out.println("minify for release mode")
+            }
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    lintOptions {
+        abortOnError false
+    }
+}
+
+ext{
+    // cpplugin配置，表示为app库
+    runAsApp = true
+}
+
+apply from: rootProject.file('free-transfor.gradle')
+
+apply from: "${rootProject.projectDir}/gradle/publishMaven.gradle"
+
+dependencies {
+    // all has base library
+    implementation project(':vds-subscriber-data')
+    implementation project(':vds-observable-status')
+    implementation project(':vds-base-library')
+    implementation files("../vds-base-library/libs/msa_helper.jar")
+    implementation project(':vds-subscriber-debugger')
+    implementation project(':vds-plugin')
+
+    def isRN = cfg.currentVersion.contains("RN")
+    def isAutoTrack = cfg.currentVersion.contains("autotrack")
+    def isGame = cfg.currentVersion.contains("game")
+
+    if (isAutoTrack) {
+        implementation project(':vds-subscriber-heatmap')
+        implementation project(':vds-subscriber-circle')
+        implementation project(':vds-observable-autoburry')
+    } else {
+        implementation project(':vds-observable-burry')
+    }
+    if (isRN) {
+        implementation project(':rn-base')
+        if (isAutoTrack) {
+            implementation project(':rn-vds-agent')
+        } else {
+            implementation project(':track-vds-agent')
+        }
+    } else if (isGame) {
+        implementation project(':game-track')
+    }
+    runtimeOnly "com.android.support:${libs.appcompat}"
+    runtimeOnly "androidx.recyclerview:recyclerview:1.0.0"
+    runtimeOnly "androidx.appcompat:appcompat:1.0.2"
+    runtimeOnly fileTree(dir: '../vds-base-library/libs', include: ['*.jar'], excludes: ['growingio.jar'])
+    runtimeOnly fileTree(dir: '../msa-helper/libs', include: ['*.jar'])
+}

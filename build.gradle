@@ -1,0 +1,183 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+apply from: rootProject.file('cproot.gradle')
+ext {
+    configuration = [
+            compileVersion     : 33,
+            minSdkVersion      : 17,
+            targetSdkVersion   : 33,
+            currentVersion     : "autotrack-2.10.5",
+            multiDexEnabled    : true,
+            sourceCompatibility: JavaVersion.VERSION_1_8,
+            targetCompatibility: JavaVersion.VERSION_1_8,
+            gradle_plugin      : "3.2.1",
+            gradle_retrolambda : "3.1.0",
+            android_apt        : "1.4",
+            version_code       : 1,
+            version_name       : "0.0.1",
+            publish_test       : true
+    ]
+
+    libraries = [
+            bintray_plugin     : "1.7.3",
+            maven_gradle_plugin: "1.5",
+            proguard_gradle    : "6.0",
+            recyclerview       : "recyclerview-v7:28.0.0",
+            appcompat          : "appcompat-v7:28.0.0",
+            design             : "design:28.0.0",
+            supportVersion     : "28.0.0",
+            junit              : "4.12",
+            json               : "20160810"
+    ]
+
+    testCPPlugin = false
+
+    showStandardStreams = true
+    failFast = true
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+    testDebugUnitTest = false
+}
+
+// ./gradlew test -x testDebugUnitTest
+if (!testDebugUnitTest) {
+    if (gradle.startParameter.getTaskNames().contains("testDebugUnitTest")) {
+        gradle.startParameter.excludedTaskNames += "testDebugUnitTest"
+    }
+}
+
+println "testCPPlugin: ${testCPPlugin}"
+buildscript {
+    ext.kotlin_version = '1.3.50'
+    repositories {
+        maven {
+            url 'http://maven.aliyun.com/nexus/content/groups/public'
+        }
+        mavenLocal()
+        mavenCentral()
+        maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
+        jcenter()
+        google()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.5.0'
+        classpath 'org.codehaus.groovy:groovy-android-gradle-plugin:2.0.0'
+        classpath "net.sf.proguard:proguard-gradle:6.0.3"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.4'
+        classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.7.1"
+        if (false) {
+            classpath "com.growingio.cp_plugin:cp-plugin:SNAPSHOT-01"
+        } else {
+            classpath files("cp-plugin/cp-plugin.jar")
+        }
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.30.0"
+    }
+}
+
+apply plugin: "org.sonarqube"
+
+import static org.sonarqube.gradle.SonarUtils.appendProp;
+
+subprojects {
+    repositories {
+        maven {
+            url 'http://maven.aliyun.com/nexus/content/groups/public'
+        }
+        mavenLocal()
+        mavenCentral()
+        google()
+        jcenter()
+        maven { url 'http://developer.huawei.com/repo/' }
+        maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
+        maven { url 'https://jitpack.io' }
+    }
+
+    afterEvaluate {
+        dependencies {
+            if (project.name == 'vds-base-library') {
+                compileOnly fileTree(include: '*.jar', dir: 'vds-base-library/libs')
+            } else if (project.name != 'vds-android-agent') {
+                compileOnly fileTree(include: '*.jar', dir: 'vds-base-library/libs', excludes: ['growingio.jar'])
+            }
+        }
+
+        String reportPath = null;
+        if (project.plugins.hasPlugin('jacoco-android')) {
+            println("found jacoco-android plugin: ${project.name}, 启动sonar配置")
+            reportPath = "${project.buildDir}/reports/jacoco/jacocoTestDebugUnitTestReport/jacocoTestDebugUnitTestReport.xml"
+        } else if (project.plugins.hasPlugin('jacoco')) {
+            println("found jacoco plugin: ${project.name}, 启动sonar配置")
+            reportPath = "${project.buildDir}/reports/jacoco/test/jacocoTestReport.xml"
+        }
+
+        if (reportPath == null) {
+            println("not found jacoco 配置: ${project.name}, 该模块sonar未启用")
+            sonarqube {
+                skipProject = true
+            }
+        } else {
+            sonarqube {
+                properties {
+                    appendProp(properties, "sonar.coverage.jacoco.xmlReportPaths", reportPath)
+                    // 单测数量无法统计Kotlin与Spock的单测数据(估计需要自己写sensor)， 不再上报
+                    property "sonar.junit.reportPaths", "none"
+                    property "sonar.junit.reportsPath", "none"
+                }
+            }
+        }
+
+        if (project.plugins.hasPlugin('groovyx.android')) {
+            println "has groovy plugin: ${project.name}"
+            androidGroovy {
+                sourceSets {
+                    main {
+                        groovy {
+                            srcDirs += 'src/main/java'
+                        }
+                    }
+                }
+            }
+
+            configurations {
+                testImplementation.extendsFrom compileOnly
+            }
+
+            dependencies {
+                testImplementation "junit:junit:4.12"
+                testImplementation "org.json:json:20160810"
+                testImplementation group: 'org.powermock', name: 'powermock-core', version: '1.7.4'
+                testImplementation group: 'org.powermock', name: 'powermock-module-junit4', version: '1.7.4'
+                testImplementation "org.powermock:powermock-module-junit4-rule:1.7.4"
+                testImplementation "org.powermock:powermock-classloading-xstream:1.7.4"
+                testImplementation group: 'org.powermock', name: 'powermock-api-mockito2', version: '1.7.4'
+                testImplementation group: 'org.spockframework', name: 'spock-core', version: '1.3-groovy-2.4'
+                testImplementation group: 'net.bytebuddy', name: 'byte-buddy', version: '1.9.3'
+                testImplementation group: 'cglib', name: 'cglib-nodep', version: '3.2.6'
+                testImplementation 'org.robolectric:robolectric:4.3.1'
+
+                compileOnly 'androidx.appcompat:appcompat:1.0.2'
+                compileOnly 'androidx.recyclerview:recyclerview:1.0.0'
+            }
+        }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+task jenkinsTask {
+
+    if (project.hasProperty('pb_vs')) {
+        project.ext.configuration.currentVersion = project.property("pb_vs")
+    }
+
+    if (project.hasProperty('pb_pf') && project.property("pb_pf") == 'test') {
+        version = project.ext.configuration.currentVersion as String
+        if (!version.contains("SNAPSHOT")) {
+            project.ext.configuration.currentVersion = version + "-SNAPSHOT"
+        }
+    }
+}
+
+apply from: "${rootProject.projectDir}/gradle/stagingMaven.gradle"

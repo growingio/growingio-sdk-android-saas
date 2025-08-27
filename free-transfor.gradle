@@ -1,0 +1,24 @@
+def runAsApp = ext.has('runAsApp')
+
+if (runAsApp) {
+    cpInfo {
+        componentIndexPackage = rootProject.ext.componentIndexPackage
+        transformPackages = ["com.growingio.android.sdk"]
+    }
+}
+
+dependencies{
+    /**  组件化配置 **/
+    if (rootProject.ext.testCPPlugin) {
+        implementation "com.growingio.cp_eventcenter:cp-eventcenter:${rootProject.ext.modularizationVersion}"
+        implementation "com.growingio.cp_base_library:cp-base-library:${rootProject.ext.modularizationVersion}"
+        implementation "com.growingio.cp_annotation:cp-annotation:${rootProject.ext.modularizationVersion}"
+    } else {
+        implementation rootProject.files("cp-plugin/cp-eventcenter.aar", "cp-plugin/cp-base-library.jar", "cp-plugin/cp-annotation.jar")
+    }
+}
+
+
+
+
+

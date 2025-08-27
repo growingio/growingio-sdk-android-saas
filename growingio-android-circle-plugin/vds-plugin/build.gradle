@@ -1,0 +1,34 @@
+apply plugin: 'com.android.library'
+apply plugin: 'groovyx.android'
+
+def cfg = rootProject.ext.configuration // 配置
+def libs = rootProject.ext.libraries // 库
+
+android {
+    compileSdkVersion    cfg.compileVersion       as Integer
+
+    defaultConfig {
+        minSdkVersion    cfg.minSdkVersion        as Integer
+        targetSdkVersion cfg.targetSdkVersion     as Integer
+        versionCode 1
+        versionName "1.0"
+    }
+
+    lintOptions{
+        abortOnError false
+    }
+
+//    buildTypes {
+//        release {
+//            minifyEnabled true
+//            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+//        }
+//    }
+}
+
+dependencies {
+    testImplementation "junit:junit:${libs.junit}"
+    testImplementation "org.json:json:${libs.json}"
+    compileOnly rootProject.files("cp-plugin/cp-eventcenter.aar")
+    compileOnly project(':vds-base-library')
+}

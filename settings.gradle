@@ -1,0 +1,10 @@
+//include ':trackdemo'
+include ':vds-base-library', ':vds-subscriber-data', ':vds-observable-autoburry', ':vds-observable-burry', ':vds-observable-status', ':vds-subscriber-heatmap', ':vds-subscriber-circle', ':vds-subscriber-debugger'
+include ':vds-android-agent'
+
+
+include ':track-vds-agent'
+project(':track-vds-agent').projectDir = new File(settingsDir, "android-sdk-rn/track-vds-agent")
+
+include "vds-plugin"
+project(':vds-plugin').projectDir = new File(settingsDir, 'growingio-android-circle-plugin/vds-plugin')

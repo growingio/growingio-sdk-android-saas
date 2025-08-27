@@ -1,0 +1,1 @@
+App圈选时用到的两个比较大的库(Java WebSocket和MPAChart),使用独立打包方式来减小SDK体积。

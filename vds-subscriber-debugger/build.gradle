@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+apply plugin: 'groovyx.android'
+apply plugin: 'jacoco-android'
+
+def cfg = rootProject.ext.configuration
+
+android {
+    compileSdkVersion cfg.compileVersion
+
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion cfg.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
+}
+
+apply from: rootProject.file('free-transfor.gradle')
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation project(':vds-base-library')
+    implementation project(':vds-plugin')
+    testImplementation project(':vds-observable-autoburry')
+}
